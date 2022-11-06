@@ -1,4 +1,5 @@
-﻿using Identity.Authentication.Entities;
+﻿using System.Security.Claims;
+using Identity.Authentication.Entities;
 using Identity.Authentication.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -20,7 +21,9 @@ namespace Identity.Authentication.Requirements
             {
                 var userId = context.User.GetId();
                 var user = await userManager.FindByIdAsync(userId.ToString());
-                if (user != null && user.LockoutEnd.GetValueOrDefault() <= DateTimeOffset.UtcNow)
+                var securityStamp = context.User.GetClaimValue(ClaimTypes.SerialNumber);
+
+                if (user != null && user.LockoutEnd.GetValueOrDefault() <= DateTimeOffset.UtcNow && securityStamp == user.SecurityStamp)
                 {
                     context.Succeed(requirement);
                 }
