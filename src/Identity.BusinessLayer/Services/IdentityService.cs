@@ -1,4 +1,8 @@
-﻿using Identity.Authentication;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using Identity.Authentication;
 using Identity.Authentication.Entities;
 using Identity.Authentication.Extensions;
 using Identity.BusinessLayer.Settings;
@@ -6,10 +10,6 @@ using Identity.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Identity.BusinessLayer.Services;
 
@@ -18,12 +18,15 @@ public class IdentityService : IIdentityService
     private readonly JwtSettings jwtSettings;
     private readonly UserManager<ApplicationUser> userManager;
     private readonly SignInManager<ApplicationUser> signInManager;
+    private readonly IUserService userService;
 
-    public IdentityService(IOptions<JwtSettings> jwtSettingsOptions, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
+    public IdentityService(IOptions<JwtSettings> jwtSettingsOptions, UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager, IUserService userService)
     {
         jwtSettings = jwtSettingsOptions.Value;
         this.userManager = userManager;
         this.signInManager = signInManager;
+        this.userService = userService;
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -34,7 +37,10 @@ public class IdentityService : IIdentityService
             return null;
         }
 
+        //var user = await userManager.FindByNameAsync(request.UserName);
         var user = await userManager.FindByNameAsync(request.UserName);
+        _ = await userManager.UpdateSecurityStampAsync(user);
+
         var userRoles = await userManager.GetRolesAsync(user);
 
         var claims = new List<Claim>()
@@ -43,21 +49,32 @@ public class IdentityService : IIdentityService
                 new Claim(ClaimTypes.Name, request.UserName),
                 new Claim(ClaimTypes.GivenName, user.FirstName),
                 new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
-                new Claim(ClaimTypes.Email, user.Email)
-            }.Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+                //new Claim(ClaimTypes.Email, user.Email)
+                new Claim(ClaimTypes.Email, user.Email),
+            //}.Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+                new Claim(ClaimTypes.SerialNumber, user.SecurityStamp.ToString())
+            }.Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role))).ToList();
 
         var loginResponse = CreateToken(claims);
 
         user.RefreshToken = loginResponse.RefreshToken;
         user.RefreshTokenExpirationDate = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpirationMinutes);
 
-        await userManager.UpdateAsync(user);
+        //await userManager.UpdateAsync(user);
+        _ = await userManager.UpdateAsync(user);
 
         return loginResponse;
     }
 
-    private AuthResponse CreateToken(IEnumerable<Claim> claims)
+    //private AuthResponse CreateToken(IEnumerable<Claim> claims)
+    //{
+    //    var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecurityKey));
+    //    var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
+    private AuthResponse CreateToken(IList<Claim> claims)
     {
+        var audienceClaim = claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Aud);
+        _ = claims.Remove(audienceClaim);
+
         var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecurityKey));
         var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
 
@@ -130,12 +147,14 @@ public class IdentityService : IIdentityService
                 return null;
             }
 
-            var loginResponse = CreateToken(user.Claims);
+            //var loginResponse = CreateToken(user.Claims);
+            var loginResponse = CreateToken(user.Claims.ToList());
 
             dbUser.RefreshToken = loginResponse.RefreshToken;
             dbUser.RefreshTokenExpirationDate = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpirationMinutes);
 
-            await userManager.UpdateAsync(dbUser);
+            //await userManager.UpdateAsync(dbUser);
+            _ = await userManager.UpdateAsync(dbUser);
 
             return loginResponse;
         }
@@ -167,5 +186,44 @@ public class IdentityService : IIdentityService
         };
 
         return response;
+    }
+
+    public async Task<AuthResponse> ImpersonateAsync(Guid userId)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null || user.LockoutEnd.GetValueOrDefault() > DateTimeOffset.UtcNow)
+        {
+            return null;
+        }
+
+        _ = await userManager.UpdateSecurityStampAsync(user);
+        var identity = userService.GetIdentity();
+
+        UpdateClaim(ClaimTypes.NameIdentifier, user.Id.ToString());
+        UpdateClaim(ClaimTypes.Name, user.UserName);
+        UpdateClaim(ClaimTypes.GivenName, user.FirstName);
+        UpdateClaim(ClaimTypes.Surname, user.LastName ?? string.Empty);
+        UpdateClaim(ClaimTypes.Email, user.Email);
+        UpdateClaim(ClaimTypes.SerialNumber, user.SecurityStamp.ToString());
+
+        var loginResponse = CreateToken(identity.Claims.ToList());
+
+        user.RefreshToken = loginResponse.RefreshToken;
+        user.RefreshTokenExpirationDate = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpirationMinutes);
+
+        _ = await userManager.UpdateAsync(user);
+
+        return loginResponse;
+
+        void UpdateClaim(string type, string value)
+        {
+            var existingClaim = identity.FindFirst(type);
+            if (existingClaim is not null)
+            {
+                identity.RemoveClaim(existingClaim);
+            }
+
+            identity.AddClaim(new Claim(type, value));
+        }
     }
 }
