@@ -22,5 +22,12 @@ namespace Identity.WebApp.Controllers
         {
             return NoContent();
         }
+
+        [HttpGet]
+        //[Authorize(Roles = RoleNames.PowerUser)]
+        public IActionResult DateInvoice()
+        {
+            return NoContent();
+        }
     }
 }

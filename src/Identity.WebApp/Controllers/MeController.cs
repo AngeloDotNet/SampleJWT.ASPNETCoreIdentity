@@ -13,9 +13,10 @@ public class MeController : ControllerBase
     {
         var user = new UserResponse
         {
+            Id = User.GetId(),
             FirstName = User.GetFirstName(),
             LastName = User.GetLastName(),
-            Email = User.GetEmail()
+            Email = User.GetEmail(),
         };
 
         return Ok(user);

@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Text;
 using Identity.Authentication;
 using Identity.Authentication.Entities;
 using Identity.Authentication.Requirements;
@@ -11,9 +13,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
-using System.IdentityModel.Tokens.Jwt;
-using System.Reflection;
-using System.Text;
 
 namespace Identity.WebApp;
 
@@ -30,12 +29,19 @@ public class Startup
     {
         var jwtSettings = Configure<JwtSettings>(nameof(JwtSettings));
 
+        //services.AddControllers();
         services.AddControllers();
+        services.AddMemoryCache();
         services.AddHttpContextAccessor();
 
         services.AddSwaggerGen(options =>
         {
-            options.SwaggerDoc("v1", new OpenApiInfo { Title = "Identity", Version = "v1" });
+            options.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Title = "Identity Sample",
+                Version = "v1"
+            });
+
             options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
             {
                 In = ParameterLocation.Header,
@@ -61,6 +67,7 @@ public class Startup
 
             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+
             options.IncludeXmlComments(xmlPath);
         });
 
@@ -100,7 +107,6 @@ public class Startup
             };
         });
 
-        services.AddSingleton<IAuthorizationHandler, MinimumAgeHandler>();
         services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
 
         services.AddAuthorization(options =>
@@ -111,24 +117,17 @@ public class Startup
 
             options.AddPolicy("SuperApplication", policy =>
             {
-                //policy.RequireClaim(ClaimTypes.Role, RoleNames.Administrator, RoleNames.PowerUser);
-                //policy.RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
                 policy.RequireClaim(CustomClaimTypes.ApplicationId, "42");
             });
 
-            options.AddPolicy("TaggiaUser", policy =>
+            options.AddPolicy("Administrator", policy =>
             {
-                policy.RequireClaim(JwtRegisteredClaimNames.Iss, "Taggia");
+                policy.RequireRole(RoleNames.Administrator);
             });
 
-            options.AddPolicy("18", policy =>
+            options.AddPolicy("PowerUser", policy =>
             {
-                policy.Requirements.Add(new MinimumAgeRequirement(18));
-            });
-
-            options.AddPolicy("21", policy =>
-            {
-                policy.Requirements.Add(new MinimumAgeRequirement(21));
+                policy.RequireRole(RoleNames.PowerUser);
             });
         });
 
@@ -156,14 +155,13 @@ public class Startup
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
-        app.UseHttpsRedirection();
-
         if (env.IsDevelopment())
         {
             app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "IdentitySample v1"));
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity Sample v1"));
         }
 
+        app.UseHttpsRedirection();
         app.UseRouting();
 
         app.UseAuthentication();

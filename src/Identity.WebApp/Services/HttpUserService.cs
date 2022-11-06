@@ -1,4 +1,5 @@
-﻿using Identity.BusinessLayer.Services;
+﻿using System.Security.Claims;
+using Identity.BusinessLayer.Services;
 
 namespace Identity.WebApp.Services
 {
@@ -11,9 +12,8 @@ namespace Identity.WebApp.Services
             this.httpContextAccessor = httpContextAccessor;
         }
 
-        public string GetUserName()
-        {
-            return httpContextAccessor.HttpContext.User.Identity.Name;
-        }
+        public string GetUserName() => httpContextAccessor.HttpContext.User.Identity.Name;
+
+        public ClaimsIdentity GetIdentity() => httpContextAccessor.HttpContext.User.Identity as ClaimsIdentity;
     }
 }
