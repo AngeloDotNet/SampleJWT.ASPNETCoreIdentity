@@ -1,5 +1,6 @@
 ﻿using Identity.Authentication;
 using Identity.Authentication.Filters;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Identity.WebApp.Controllers
@@ -9,7 +10,7 @@ namespace Identity.WebApp.Controllers
     [RoleAuthorize(RoleNames.Administrator)]
     public class InvoicesController : ControllerBase
     {
-        [HttpGet]
+        [HttpGet("GetInvoices")]
         //[RoleAuthorize(RoleNames.Administrator, RoleNames.PowerUser)]
         public IActionResult GetInvoices()
         {
@@ -23,11 +24,12 @@ namespace Identity.WebApp.Controllers
             return NoContent();
         }
 
-        [HttpGet]
-        //[Authorize(Roles = RoleNames.PowerUser)]
-        public IActionResult DateInvoice()
+        [AllowAnonymous]
+        [HttpGet("GetDate")]
+        //[RoleAuthorize(RoleNames.PowerUser)]
+        public IActionResult GetDate()
         {
-            return NoContent();
+            return Ok(DateTime.UtcNow.ToString());
         }
     }
 }

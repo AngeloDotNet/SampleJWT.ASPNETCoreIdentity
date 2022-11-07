@@ -34,8 +34,8 @@ namespace Identity.WebApp.StartupTasks
             {
                 UserName = "admin@example.com",
                 Email = "admin@example.com",
-                FirstName = "Administrator",
-                LastName = "User"
+                FirstName = "Admin",
+                LastName = "Manager"
             };
 
             await CheckCreateUserAsync(administratorUser, "Italia2022!", RoleNames.Administrator, RoleNames.User);

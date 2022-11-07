@@ -161,8 +161,10 @@ public class Startup
         }
     }
 
-    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    public void Configure(WebApplication app)
     {
+        IWebHostEnvironment env = app.Environment;
+
         if (env.IsDevelopment())
         {
             app.UseSwagger();

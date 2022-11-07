@@ -37,7 +37,6 @@ public class IdentityService : IIdentityService
             return null;
         }
 
-        //var user = await userManager.FindByNameAsync(request.UserName);
         var user = await userManager.FindByNameAsync(request.UserName);
         _ = await userManager.UpdateSecurityStampAsync(user);
 
@@ -49,9 +48,7 @@ public class IdentityService : IIdentityService
                 new Claim(ClaimTypes.Name, request.UserName),
                 new Claim(ClaimTypes.GivenName, user.FirstName),
                 new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
-                //new Claim(ClaimTypes.Email, user.Email)
                 new Claim(ClaimTypes.Email, user.Email),
-            //}.Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
                 new Claim(ClaimTypes.SerialNumber, user.SecurityStamp.ToString())
             }.Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role))).ToList();
 
@@ -60,16 +57,11 @@ public class IdentityService : IIdentityService
         user.RefreshToken = loginResponse.RefreshToken;
         user.RefreshTokenExpirationDate = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpirationMinutes);
 
-        //await userManager.UpdateAsync(user);
         _ = await userManager.UpdateAsync(user);
 
         return loginResponse;
     }
 
-    //private AuthResponse CreateToken(IEnumerable<Claim> claims)
-    //{
-    //    var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecurityKey));
-    //    var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
     private AuthResponse CreateToken(IList<Claim> claims)
     {
         var audienceClaim = claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Aud);
@@ -147,13 +139,11 @@ public class IdentityService : IIdentityService
                 return null;
             }
 
-            //var loginResponse = CreateToken(user.Claims);
             var loginResponse = CreateToken(user.Claims.ToList());
 
             dbUser.RefreshToken = loginResponse.RefreshToken;
             dbUser.RefreshTokenExpirationDate = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpirationMinutes);
 
-            //await userManager.UpdateAsync(dbUser);
             _ = await userManager.UpdateAsync(dbUser);
 
             return loginResponse;
