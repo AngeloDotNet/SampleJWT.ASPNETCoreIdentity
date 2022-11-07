@@ -10,6 +10,7 @@ using Identity.WebApp.StartupTasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
@@ -29,7 +30,6 @@ public class Startup
     {
         var jwtSettings = Configure<JwtSettings>(nameof(JwtSettings));
 
-        //services.AddControllers();
         services.AddControllers();
         services.AddMemoryCache();
         services.AddHttpContextAccessor();
@@ -71,8 +71,17 @@ public class Startup
             options.IncludeXmlComments(xmlPath);
         });
 
-        var connectionString = Configuration.GetSection("ConnectionStrings").GetValue<string>("Default");
-        services.AddSqlServer<AuthenticationDbContext>(connectionString);
+        var databaseInMemory = Configuration.GetSection("DatabaseInMemory").GetValue<bool>("enabled");
+
+        if (databaseInMemory)
+        {
+            services.AddDbContext<AuthenticationDbContext>(option => option.UseInMemoryDatabase("Identity"));
+        }
+        else
+        {
+            var connectionString = Configuration.GetSection("ConnectionStrings").GetValue<string>("Default");
+            services.AddSqlServer<AuthenticationDbContext>(connectionString);
+        }
 
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
         {
@@ -139,7 +148,6 @@ public class Startup
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IUserService, HttpUserService>();
-        services.AddScoped<IAuthenticatedService, AuthenticatedService>();
 
         services.AddHostedService<AuthenticationStartupTask>();
 
@@ -158,7 +166,7 @@ public class Startup
         if (env.IsDevelopment())
         {
             app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity Sample v1"));
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity v1"));
         }
 
         app.UseHttpsRedirection();
