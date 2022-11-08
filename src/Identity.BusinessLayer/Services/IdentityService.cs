@@ -59,6 +59,8 @@ public class IdentityService : IIdentityService
 
         _ = await userManager.UpdateAsync(user);
 
+        loginResponse.RequireChangePassword = user.NotifyChangePassword;
+
         return loginResponse;
     }
 
@@ -159,7 +161,8 @@ public class IdentityService : IIdentityService
             FirstName = request.FirstName,
             LastName = request.LastName,
             Email = request.Email,
-            UserName = request.Email
+            UserName = request.Email,
+            PasswordChangeDate = DateTime.UtcNow
         };
 
         var result = await userManager.CreateAsync(user, request.Password);
