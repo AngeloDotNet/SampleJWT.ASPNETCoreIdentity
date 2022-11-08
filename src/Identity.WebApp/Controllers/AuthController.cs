@@ -70,4 +70,18 @@ public class AuthController : ControllerBase
 
         return BadRequest(response);
     }
+
+    [AllowAnonymous]
+    [HttpPost("resetPassword")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        var response = await identityService.ChangePasswordAsync(request);
+
+        if (response.Result)
+        {
+            return Ok(response);
+        }
+
+        return BadRequest(response);
+    }
 }

@@ -219,4 +219,45 @@ public class IdentityService : IIdentityService
             identity.AddClaim(new Claim(type, value));
         }
     }
+
+    public async Task<ChangePasswordResponse> ChangePasswordAsync(ChangePasswordRequest request)
+    {
+        ChangePasswordResponse cpr = new();
+
+        try
+        {
+            var profileUser = new ApplicationUser
+            {
+                Email = request.emailUser,
+                UserName = request.emailUser,
+            };
+
+            var entity = await userManager.FindByEmailAsync(profileUser.Email);
+
+            if (entity == null)
+                throw new Exception("Nessuna entità trovata.");
+
+            var userProfile = await userManager.FindByNameAsync(profileUser.UserName);
+            userProfile.PasswordChangeDate = DateTime.UtcNow;
+
+            var checkPassword = await userManager.CheckPasswordAsync(userProfile, request.oldPassword);
+
+            if (!checkPassword)
+                throw new Exception("Errore durante il cambio password.");
+
+            await userManager.ChangePasswordAsync(userProfile, request.oldPassword, request.newPassword);
+            await userManager.UpdateAsync(userProfile);
+
+            cpr.Result = true;
+
+            return cpr;
+        }
+        catch (Exception ex)
+        {
+            cpr.Result = false;
+            cpr.Error = ex.Message;
+
+            return cpr;
+        }
+    }
 }
