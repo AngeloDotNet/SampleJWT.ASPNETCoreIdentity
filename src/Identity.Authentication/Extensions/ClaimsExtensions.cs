@@ -12,9 +12,7 @@ namespace Identity.Authentication.Extensions
         }
 
         public static string GetFirstName(this IPrincipal user) => user.GetClaimValue(ClaimTypes.GivenName);
-
         public static string GetLastName(this IPrincipal user) => user.GetClaimValue(ClaimTypes.Surname);
-
         public static string GetEmail(this IPrincipal user) => user.GetClaimValue(ClaimTypes.Email);
 
         public static int GetApplicationId(this IPrincipal user)
