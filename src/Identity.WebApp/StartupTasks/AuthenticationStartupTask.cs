@@ -36,8 +36,8 @@ namespace Identity.WebApp.StartupTasks
                 Email = "admin@example.com",
                 FirstName = "Admin",
                 LastName = "Manager",
-                PasswordChangeDate = DateTime.UtcNow
-                //PasswordChangeDate = DateTime.UtcNow.AddDays(-100)
+                //PasswordChangeDate = DateTime.UtcNow
+                PasswordChangeDate = DateTime.UtcNow.AddDays(-100)
             };
 
             await CheckCreateUserAsync(administratorUser, "Italia2022!", RoleNames.Administrator, RoleNames.User);

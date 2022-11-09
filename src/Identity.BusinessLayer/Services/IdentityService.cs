@@ -232,21 +232,21 @@ public class IdentityService : IIdentityService
                 UserName = request.emailUser,
             };
 
-            var entity = await userManager.FindByEmailAsync(profileUser.Email);
-
-            if (entity == null)
-                throw new Exception("Nessuna entità trovata.");
-
             var userProfile = await userManager.FindByNameAsync(profileUser.UserName);
             userProfile.PasswordChangeDate = DateTime.UtcNow;
 
             var checkPassword = await userManager.CheckPasswordAsync(userProfile, request.oldPassword);
 
             if (!checkPassword)
+                throw new Exception("Errore durante la verifica della password.");
+
+            var changePasswordResult = await userManager.ChangePasswordAsync(userProfile, request.oldPassword, request.newPassword);
+
+            if (!changePasswordResult.Succeeded)
                 throw new Exception("Errore durante il cambio password.");
 
-            await userManager.ChangePasswordAsync(userProfile, request.oldPassword, request.newPassword);
             await userManager.UpdateAsync(userProfile);
+            await signInManager.RefreshSignInAsync(userProfile);
 
             cpr.Result = true;
 
